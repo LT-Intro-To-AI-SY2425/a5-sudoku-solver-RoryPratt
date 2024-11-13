@@ -1,5 +1,6 @@
 import copy  # to make a deepcopy of the board
 from typing import List, Any, Tuple
+import math
 
 # import Stack and Queue classes for BFS/DFS
 from stack_and_queue import Stack, Queue
@@ -106,7 +107,18 @@ class Board:
         Returns:
             a tuple of row, column index identifying the most constrained cell
         """
-        pass
+        x = 0
+        y = 0
+        min_len = 10
+
+        for i1 in range(len(self.rows)):
+            for i2 in range(len(self.rows[i1])):
+                if len(self.rows[i1][i2]) < min_len:
+                    min_len = len(self.rows[i1][i2])
+                    x = i2
+                    y = i1
+
+        return (x, y)
 
     def failure_test(self) -> bool:
         """Check if we've failed to correctly fill out the puzzle. If we find a cell
@@ -116,7 +128,9 @@ class Board:
         Returns:
             True if we have failed to fill out the puzzle, False otherwise
         """
-        pass
+        for i1 in self.rows:
+            if [] in i1: return False
+        return True
 
     def goal_test(self) -> bool:
         """Check if we've completed the puzzle (if we've placed all the numbers).
@@ -125,9 +139,14 @@ class Board:
         Returns:
             True if we've placed all numbers, False otherwise
         """
-        pass
+        for i1 in self.rows:
+            for i2 in i1:
+                if len(i2) != 1: return False
+        return True
 
     def update(self, row: int, column: int, assignment: int) -> None:
+        def map_value(item):
+            return (item)-((item)%3)
         """Assigns the given value to the cell given by passed in row and column
         coordinates. By assigning we mean set the cell to the value so instead the cell
         being a list of possibities it's just the new assignment value.  Update all
@@ -139,8 +158,20 @@ class Board:
             column - index of the column to assign
             assignment - value to place at given row, column coordinate
         """
-        pass
+        self.rows[row][column] = [assignment]
 
+        for i in range(len(self.rows[row])):
+            self.rows[row][i].remove(assignment)
+
+        for i in range(len(self.rows)):
+            self.rows[i][column].remove(assignment)
+        
+        gy = map_value(row)
+        gx = map_value(column)
+
+        for y in range(3):
+            for x in range(3):
+                self.rows[gy + y][gx + x].remove(assignment)
 
 def DFS(state: Board) -> Board:
     """Performs a depth first search. Takes a Board and attempts to assign values to
