@@ -210,8 +210,8 @@ def DFS(state: Board) -> Board:
     if len(bl) == 0: return state
 
     for item in bl:
-        ans = DFS(bl)
-        if ans != state: return ans
+        ans = DFS(item)
+        if ans.goal_test(): return ans
 
     return state
 
