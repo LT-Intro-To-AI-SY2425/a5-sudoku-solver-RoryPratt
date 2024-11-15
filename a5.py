@@ -113,12 +113,13 @@ class Board:
 
         for i1 in range(len(self.rows)):
             for i2 in range(len(self.rows[i1])):
-                if len(self.rows[i1][i2]) < min_len:
-                    min_len = len(self.rows[i1][i2])
-                    x = i2
-                    y = i1
+                if isinstance(self.rows[i1][i2], list):
+                    if len(self.rows[i1][i2]) < min_len:
+                        min_len = len(self.rows[i1][i2])
+                        x = i2
+                        y = i1
 
-        return (x, y)
+        return (y, x)
 
     def failure_test(self) -> bool:
         """Check if we've failed to correctly fill out the puzzle. If we find a cell
@@ -129,8 +130,8 @@ class Board:
             True if we have failed to fill out the puzzle, False otherwise
         """
         for i1 in self.rows:
-            if [] in i1: return False
-        return True
+            if [] in i1: return True
+        return False
 
     def goal_test(self) -> bool:
         """Check if we've completed the puzzle (if we've placed all the numbers).
@@ -139,14 +140,12 @@ class Board:
         Returns:
             True if we've placed all numbers, False otherwise
         """
-        for i1 in self.rows:
-            for i2 in i1:
-                if len(i2) != 1: return False
-        return True
+        return self.num_nums_placed == 81
 
     def update(self, row: int, column: int, assignment: int) -> None:
+        self.num_nums_placed += 1
         def map_value(item):
-            return (item)-((item)%3)
+            return item-(item%3)
         """Assigns the given value to the cell given by passed in row and column
         coordinates. By assigning we mean set the cell to the value so instead the cell
         being a list of possibities it's just the new assignment value.  Update all
@@ -158,22 +157,33 @@ class Board:
             column - index of the column to assign
             assignment - value to place at given row, column coordinate
         """
-        self.rows[row][column] = [assignment]
+        self.rows[row][column] = assignment
 
         for i in range(len(self.rows[row])):
-            self.rows[row][i].remove(assignment)
+            if isinstance(self.rows[row][i], list):
+                remove_if_exists(self.rows[row][i], assignment)
+                if len(self.rows[row][i]) == 1:
+                    self.update(row,i, self.rows[row][i][0])
 
         for i in range(len(self.rows)):
-            self.rows[i][column].remove(assignment)
+            if isinstance(self.rows[i][column], list):
+                remove_if_exists(self.rows[i][column], assignment)
+                if len(self.rows[i][column]) == 1:
+                    self.update(i,column, self.rows[i][column][0])
         
         gy = map_value(row)
         gx = map_value(column)
 
         for y in range(3):
             for x in range(3):
-                self.rows[gy + y][gx + x].remove(assignment)
+                if isinstance(self.rows[gy + y][gx + x], list):
+                    remove_if_exists(self.rows[gy + y][gx + x], assignment)
+                    if len(self.rows[gy + y][gx + x]) == 1:
+                        self.update(gy + y,gx + x, self.rows[gy + y][gx + x][0])
 
 def DFS(state: Board) -> Board:
+
+    if state.goal_test(): return state
     """Performs a depth first search. Takes a Board and attempts to assign values to
     most constrained cells until a solution is reached or a mistake has been made at
     which point it backtracks.
@@ -185,7 +195,25 @@ def DFS(state: Board) -> Board:
     Returns:
         either None in the case of invalid input or a solved board
     """
-    pass
+
+    constrained = state.find_most_constrained_cell()
+
+    bl = []
+
+    for st in state.rows[constrained[0]][constrained[1]]:
+        meow = state
+        meow.update(constrained[0], constrained[1], st)
+        if meow.goal_test(): return meow
+        if not meow.failure_test:
+            bl.append(meow)
+    
+    if len(bl) == 0: return state
+
+    for item in bl:
+        ans = DFS(bl)
+        if ans != state: return ans
+
+    return state
 
 
 def BFS(state: Board) -> Board:
@@ -207,147 +235,149 @@ if __name__ == "__main__":
     # uncomment the below lines once you've implemented the board class
    
     # # CODE BELOW HERE RUNS YOUR BFS/DFS
-    # print("<<<<<<<<<<<<<< Solving Sudoku >>>>>>>>>>>>>>")
+    print("<<<<<<<<<<<<<< Solving Sudoku >>>>>>>>>>>>>>")
 
-    # def test_dfs_or_bfs(use_dfs: bool, moves: List[Tuple[int, int, int]]) -> None:
-    #     b = Board()
-    #     # make initial moves to set up board
-    #     for move in moves:
-    #         b.update(*move)
+    def test_dfs_or_bfs(use_dfs: bool, moves: List[Tuple[int, int, int]]) -> None:
+        b = Board()
+        #make initial moves to set up board
+        for move in moves:
+            b.update(*move)
 
     #     # print initial board
-    #     print("<<<<< Initial Board >>>>>")
-    #     b.print_pretty()
-    #     # solve board
-    #     solution = (DFS if use_dfs else BFS)(b)
-    #     # print solved board
-    #     print("<<<<< Solved Board >>>>>")
-    #     solution.print_pretty()
+        print("<<<<< Initial Board >>>>>")
+        b.print_pretty()
+        # solve board
+        solution = (DFS if use_dfs else BFS)(b)
+        # print solved board
+        print("<<<<< Solved Board >>>>>")
+        solution.print_pretty()
 
     # # sets of moves for the different games
-    # first_moves = [
-    #     (0, 1, 7),
-    #     (0, 7, 1),
-    #     (1, 2, 9),
-    #     (1, 3, 7),
-    #     (1, 5, 4),
-    #     (1, 6, 2),
-    #     (2, 2, 8),
-    #     (2, 3, 9),
-    #     (2, 6, 3),
-    #     (3, 1, 4),
-    #     (3, 2, 3),
-    #     (3, 4, 6),
-    #     (4, 1, 9),
-    #     (4, 3, 1),
-    #     (4, 5, 8),
-    #     (4, 7, 7),
-    #     (5, 4, 2),
-    #     (5, 6, 1),
-    #     (5, 7, 5),
-    #     (6, 2, 4),
-    #     (6, 5, 5),
-    #     (6, 6, 7),
-    #     (7, 2, 7),
-    #     (7, 3, 4),
-    #     (7, 5, 1),
-    #     (7, 6, 9),
-    #     (8, 1, 3),
-    #     (8, 7, 8),
-    # ]
+    first_moves = [
+        (0, 1, 7),
+        (0, 7, 1),
+        (1, 2, 9),
+        (1, 3, 7),
+        (1, 5, 4),
+        (1, 6, 2),
+        (2, 2, 8),
+        (2, 3, 9),
+        (2, 6, 3),
+        (3, 1, 4),
+        (3, 2, 3),
+        (3, 4, 6),
+        (4, 1, 9),
+        (4, 3, 1),
+        (4, 5, 8),
+        (4, 7, 7),
+        (5, 4, 2),
+        (5, 6, 1),
+        (5, 7, 5),
+        (6, 2, 4),
+        (6, 5, 5),
+        (6, 6, 7),
+        (7, 2, 7),
+        (7, 3, 4),
+        (7, 5, 1),
+        (7, 6, 9),
+        (8, 1, 3),
+        (8, 7, 8),
+    ]
 
-    # second_moves = [
-    #     (0, 1, 2),
-    #     (0, 3, 3),
-    #     (0, 5, 5),
-    #     (0, 7, 4),
-    #     (1, 6, 9),
-    #     (2, 1, 7),
-    #     (2, 4, 4),
-    #     (2, 7, 8),
-    #     (3, 0, 1),
-    #     (3, 2, 7),
-    #     (3, 5, 9),
-    #     (3, 8, 2),
-    #     (4, 1, 9),
-    #     (4, 4, 3),
-    #     (4, 7, 6),
-    #     (5, 0, 6),
-    #     (5, 3, 7),
-    #     (5, 6, 5),
-    #     (5, 8, 8),
-    #     (6, 1, 1),
-    #     (6, 4, 9),
-    #     (6, 7, 2),
-    #     (7, 2, 6),
-    #     (8, 1, 4),
-    #     (8, 3, 8),
-    #     (8, 5, 7),
-    #     (8, 7, 5),
-    # ]
+    second_moves = [
+        (0, 1, 2),
+        (0, 3, 3),
+        (0, 5, 5),
+        (0, 7, 4),
+        (1, 6, 9),
+        (2, 1, 7),
+        (2, 4, 4),
+        (2, 7, 8),
+        (3, 0, 1),
+        (3, 2, 7),
+        (3, 5, 9),
+        (3, 8, 2),
+        (4, 1, 9),
+        (4, 4, 3),
+        (4, 7, 6),
+        (5, 0, 6),
+        (5, 3, 7),
+        (5, 6, 5),
+        (5, 8, 8),
+        (6, 1, 1),
+        (6, 4, 9),
+        (6, 7, 2),
+        (7, 2, 6),
+        (8, 1, 4),
+        (8, 3, 8),
+        (8, 5, 7),
+        (8, 7, 5),
+    ]
     # #Create a sudoku board.
-    # b = Board()
-    # #Place the 28 assignments in first_moves on the board.
-    # for trip in first_moves:
-    #     b.rows[trip[0]][trip[1]] = trip[2]
-    # #NOTE - the above code only *puts* the numbers on the board, but doesn't
-    # #   do the work that update does (remove numbers from other lists, etc).
+    b = Board()
+    #Place the 28 assignments in first_moves on the board.
+    for trip in first_moves:
+        b.rows[trip[0]][trip[1]] = trip[2]
+    #NOTE - the above code only *puts* the numbers on the board, but doesn't
+    #   do the work that update does (remove numbers from other lists, etc).
 
     # #I'm going to now alter 3 lists on the board to make them shorter (more
     # #   constrained. 
-    # remove_if_exists(b.rows[0][0], 8)
-    # remove_if_exists(b.rows[0][0], 7)
-    # remove_if_exists(b.rows[0][0], 3)
-    # remove_if_exists(b.rows[0][0], 2)
-    # remove_if_exists(b.rows[4][8], 8)
-    # remove_if_exists(b.rows[4][8], 1)
-    # remove_if_exists(b.rows[4][8], 2)
-    # remove_if_exists(b.rows[4][8], 3)
-    # remove_if_exists(b.rows[4][8], 4)
-    # remove_if_exists(b.rows[6][7], 2)
-    # remove_if_exists(b.rows[6][7], 3)
-    # remove_if_exists(b.rows[6][7], 5)
-    # remove_if_exists(b.rows[6][7], 6)
+    remove_if_exists(b.rows[0][0], 8)
+    remove_if_exists(b.rows[0][0], 7)
+    remove_if_exists(b.rows[0][0], 3)
+    remove_if_exists(b.rows[0][0], 2)
+    remove_if_exists(b.rows[4][8], 8)
+    remove_if_exists(b.rows[4][8], 1)
+    remove_if_exists(b.rows[4][8], 2)
+    remove_if_exists(b.rows[4][8], 3)
+    remove_if_exists(b.rows[4][8], 4)
+    remove_if_exists(b.rows[6][7], 2)
+    remove_if_exists(b.rows[6][7], 3)
+    remove_if_exists(b.rows[6][7], 5)
+    remove_if_exists(b.rows[6][7], 6)
     # #we removed 5 items from positions (4,8) so that should now be the most
     # #  constrained.
-    # assert b.find_most_constrained_cell() == (4,8), "find most constrained cell test 1"
-    # assert b.failure_test() == False, "failure test test 1"
-    # assert b.goal_test() == False, "goal test test 1"
+    assert b.find_most_constrained_cell() == (4,8), "find most constrained cell test 1"
+    assert b.failure_test() == False, "failure test test 1"
+    assert b.goal_test() == False, "goal test test 1"
 
-    # b.rows[4][3] = []
-    # assert b.find_most_constrained_cell() == (4,3), "find most constrained cell test 2"
-    # assert b.failure_test() == True, "failure test test 2"
-    # print("All part 1 tests passed!")
+    b.rows[4][3] = []
+
+    assert b.find_most_constrained_cell() == (4,3), "find most constrained cell test 2"
+    assert b.failure_test() == True, "failure test test 2"
+    print("All part 1 tests passed!")
 
     # ##Now, let's write some quick tests to check update!
     # #Create a sudoku board.
-    # g = Board()
+    g = Board()
     # #Place the 28 assignments in first_moves on the board.
-    # for trip in first_moves:
-    #     g.update(trip[0],trip[1],trip[2])
-    # g.print_pretty()
+    for trip in first_moves:
+        g.update(trip[0],trip[1],trip[2])
+    g.print_pretty()
     # #From the above print statement, you can see which numbers
     # #  have been assigned to the board, and then create test
     # #  cases by looking at the board and listing what values are
     # #  still possible for a specific cell. I have created
     # #  2 such test cases like that for you. 
-    # assert g.rows[0][2] == [2,5,6], "update test 1"
-    # assert g.rows[5][5] == [3,7,9], "update test 2"
-    # assert g.num_nums_placed == 28, "update test 3"
-    # assert g.find_most_constrained_cell() == (1,7), "fmc test"
-    # assert g.failure_test() == False, "failure test test"
-    # assert g.goal_test() == False, "goal test test"
-    # g.num_nums_placed = 81
-    # assert g.goal_test() == True, "goal test test"
-    # print("All part 2 tests passed! Testing DFS and BFS next:")
+    #assert g.rows[0][2] == [2,5,6], "update test 1"
+    #assert g.rows[5][5] == [3,7,9], "update test 2"
+    #print(g.num_nums_placed)
+    #assert g.num_nums_placed == 28, "update test 3"
+    #assert g.find_most_constrained_cell() == (1,7), "fmc test"
+    assert g.failure_test() == False, "failure test test"
+    assert g.goal_test() == False, "goal test test"
+    g.num_nums_placed = 81
+    assert g.goal_test() == True, "goal test test"
+    print("All part 2 tests passed! Testing DFS and BFS next:")
 
-    # print("<<<<<<<<<<<<<< Testing DFS on First Game >>>>>>>>>>>>>>")
+    print("<<<<<<<<<<<<<< Testing DFS on First Game >>>>>>>>>>>>>>")
 
-    # test_dfs_or_bfs(True, first_moves)
+    test_dfs_or_bfs(True, first_moves)
 
-    # print("<<<<<<<<<<<<<< Testing DFS on Second Game >>>>>>>>>>>>>>")
+    print("<<<<<<<<<<<<<< Testing DFS on Second Game >>>>>>>>>>>>>>")
 
-    # test_dfs_or_bfs(True, second_moves)
+    test_dfs_or_bfs(True, second_moves)
 
     # print("<<<<<<<<<<<<<< Testing BFS on First Game >>>>>>>>>>>>>>")
 
