@@ -197,22 +197,17 @@ def DFS(state: Board) -> Board:
     """
 
     constrained = state.find_most_constrained_cell()
+    solved = False
 
-    bl = []
-
-    for st in state.rows[constrained[0]][constrained[1]]:
-        meow = state
-        meow.update(constrained[0], constrained[1], st)
-        if meow.goal_test(): return meow
-        if not meow.failure_test:
-            bl.append(meow)
-    
-    if len(bl) == 0: return state
-
-    for item in bl:
-        ans = DFS(item)
-        if ans.goal_test(): return ans
-
+    while not solved:
+        for i in state.rows[constrained[0]][constrained[1]]:
+            possi = state
+            possi.update(constrained[0], constrained[1], i)
+            if possi.goal_test(): return possi
+            if not possi.failure_test():
+                new_possi = DFS(possi)
+                if new_possi.goal_test(): return new_possi
+    print("failed")
     return state
 
 
